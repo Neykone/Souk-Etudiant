@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("io.realm.kotlin")
+    id("realm-android")  // Version simplifiée pour Java
 }
 
 android {
@@ -44,7 +44,7 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.cardview:cardview:1.0.0")
 
-    // Realm
+    // Realm pour Java
     implementation("io.realm:realm-android-library:10.15.1")
 
     // Pour les ViewModels
