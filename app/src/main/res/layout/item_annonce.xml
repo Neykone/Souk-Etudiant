@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp"
+    app:cardUseCompatPadding="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <!-- Image de l'annonce -->
+        <ImageView
+            android:id="@+id/imageViewAnnonce"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_book_placeholder"
+            android:background="@color/light_grey"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Conteneur des textes -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Titre et prix sur la même ligne -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/textViewTitre"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Titre du produit"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/black"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/textViewPrix"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="99.99€"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/design_default_color_primary"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+
+            <!-- Description (2 lignes max) -->
+            <TextView
+                android:id="@+id/textViewDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Description de l'article avec un aperçu sur deux lignes maximum pour voir rapidement de quoi il s'agit sans avoir à cliquer."
+                android:textSize="14sp"
+                android:textColor="@color/grey"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:layout_marginTop="4dp" />
+
+            <!-- Catégorie et état sur la même ligne -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/textViewCategorie"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Catégorie"
+                    android:textSize="12sp"
+                    android:background="@color/design_default_color_primary"
+                    android:textColor="@color/white"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/textViewEtat"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="État"
+                    android:textSize="12sp"
+                    android:background="@color/design_default_color_secondary"
+                    android:textColor="@color/white"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp" />
+            </LinearLayout>
+
+            <!-- Vendeur (optionnel, peut être retiré si trop d'info) -->
+            <TextView
+                android:id="@+id/textViewVendeur"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Vendeur: Étudiant"
+                android:textSize="11sp"
+                android:textColor="@color/grey"
+                android:layout_marginTop="4dp"
+                android:visibility="gone" />  <!-- Caché par défaut -->
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

@@ -26,6 +26,7 @@ public class Annonce extends RealmObject {
 
     private boolean estVendu;
     private String photoUrl;
+    private boolean aPhoto;
 
     // Constructeurs
     public Annonce() {
@@ -82,4 +83,7 @@ public class Annonce extends RealmObject {
 
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    public boolean isAPhoto() { return aPhoto; }
+    public void setAPhoto(boolean aPhoto) { this.aPhoto = aPhoto; }
 }
