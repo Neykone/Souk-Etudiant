@@ -1,24 +1,36 @@
 package com.souketudiant;
 
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 
-import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import io.realm.Realm;
+
+import com.souketudiant.utils.DonneesTest;
 
 public class MainActivity extends AppCompatActivity {
+
+    private Realm realm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+
+        // Initialisation
+        realm = Realm.getDefaultInstance();
+
+        // Optionnel : générer des données de test si la base est vide
+        DonneesTest.genererDonneesTest(realm);
+
+        // TODO: Ici on chargera le fragment d'accueil plus tard
+        // Pour l'instant, on laisse vide
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (realm != null && !realm.isClosed()) {
+            realm.close();
+        }
     }
 }
