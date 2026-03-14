@@ -1,6 +1,5 @@
-// build.gradle.kts (Project: SoukEtudiant)
 plugins {
-    id("com.android.application") version "8.2.0" apply false
+    id("com.android.application") version "7.4.2" apply false
 }
 
 buildscript {
@@ -9,7 +8,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.2.0")
+        classpath("com.android.tools.build:gradle:7.4.2")
         classpath("io.realm:realm-gradle-plugin:10.15.1")
     }
 }
