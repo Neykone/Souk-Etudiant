@@ -70,6 +70,8 @@ public class DetailAnnonceActivity extends AppCompatActivity {
 
         // Configurer les boutons
         setupButtons();
+        // mise a jour
+        updateFavoriButtonText();
     }
 
     private void initViews() {
@@ -138,16 +140,53 @@ public class DetailAnnonceActivity extends AppCompatActivity {
         });
 
         buttonFavoris.setOnClickListener(v -> {
-            Toast.makeText(this,
-                    "Annonce ajoutée aux favoris",
-                    Toast.LENGTH_SHORT).show();
-            // TODO: Implémenter la logique des favoris
+            toggleFavori();
         });
 
         buttonRetour.setOnClickListener(v -> {
-            finish(); // Retour à l'écran précédent
+            finish();
         });
     }
+
+    private void toggleFavori() {
+        String annonceId = annonce.getId();
+
+        realm.executeTransactionAsync(r -> {
+            Annonce annonceToUpdate = r.where(Annonce.class)
+                    .equalTo("id", annonceId)
+                    .findFirst();
+            if (annonceToUpdate != null) {
+                boolean nouveauStatut = !annonceToUpdate.isEstFavori();
+                annonceToUpdate.setEstFavori(nouveauStatut);
+
+                int nouveauNombre = annonceToUpdate.getNombreFavoris() + (nouveauStatut ? 1 : -1);
+                annonceToUpdate.setNombreFavoris(Math.max(0, nouveauNombre));
+            }
+        }, () -> {
+            // Succès
+            String message = annonce.isEstFavori() ?
+                    "✅ Ajouté aux favoris" :
+                    "❌ Retiré des favoris";
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+
+            // Mettre à jour le texte du bouton
+            updateFavoriButtonText();
+        }, error -> {
+            Toast.makeText(this,
+                    "Erreur lors de la mise à jour",
+                    Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void updateFavoriButtonText() {
+        if (annonce.isEstFavori()) {
+            buttonFavoris.setText("Retirer des favoris");
+        } else {
+            buttonFavoris.setText("Ajouter aux favoris");
+        }
+    }
+
+
 
     @Override
     protected void onDestroy() {

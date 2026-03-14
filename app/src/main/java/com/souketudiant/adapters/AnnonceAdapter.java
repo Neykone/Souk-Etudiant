@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -19,18 +20,26 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
+import io.realm.Realm;
+
 public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceViewHolder> {
 
     private List<Annonce> annonces;
     private OnItemClickListener listener;
+    private OnFavoriClickListener favoriListener;
 
     public interface OnItemClickListener {
         void onItemClick(Annonce annonce);
     }
 
-    public AnnonceAdapter(List<Annonce> annonces, OnItemClickListener listener) {
+    public interface OnFavoriClickListener {
+        void onFavoriClick(Annonce annonce, int position);
+    }
+
+    public AnnonceAdapter(List<Annonce> annonces, OnItemClickListener listener, OnFavoriClickListener favoriListener) {
         this.annonces = annonces;
         this.listener = listener;
+        this.favoriListener = favoriListener;
     }
 
     @NonNull
@@ -44,7 +53,7 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
     @Override
     public void onBindViewHolder(@NonNull AnnonceViewHolder holder, int position) {
         Annonce annonce = annonces.get(position);
-        holder.bind(annonce, listener);
+        holder.bind(annonce, listener, favoriListener, position);
     }
 
     @Override
@@ -66,6 +75,8 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
         private TextView textViewCategorie;
         private TextView textViewEtat;
         private TextView textViewVendeur;
+        private ImageView imageViewFavori;
+        private Realm realm;
 
         public AnnonceViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -76,9 +87,12 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
             textViewCategorie = itemView.findViewById(R.id.textViewCategorie);
             textViewEtat = itemView.findViewById(R.id.textViewEtat);
             textViewVendeur = itemView.findViewById(R.id.textViewVendeur);
+            imageViewFavori = itemView.findViewById(R.id.imageViewFavori);
+            realm = Realm.getDefaultInstance();
         }
 
-        public void bind(final Annonce annonce, final OnItemClickListener listener) {
+        public void bind(final Annonce annonce, final OnItemClickListener itemListener,
+                         final OnFavoriClickListener favoriListener, final int position) {
             // Titre
             textViewTitre.setText(annonce.getTitre());
 
@@ -87,7 +101,7 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
             String prixFormate = format.format(annonce.getPrix());
             textViewPrix.setText(prixFormate);
 
-            // Description (avec texte par défaut si vide)
+            // Description
             if (annonce.getDescription() != null && !annonce.getDescription().isEmpty()) {
                 textViewDescription.setText(annonce.getDescription());
             } else {
@@ -100,7 +114,7 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
             // État
             textViewEtat.setText(annonce.getEtat());
 
-            // Vendeur (optionnel)
+            // Vendeur
             if (annonce.getVendeur() != null) {
                 textViewVendeur.setText("Vendeur: " + annonce.getVendeur().getNom());
             }
@@ -118,12 +132,30 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
                 imageView.setImageResource(R.drawable.ic_book_placeholder);
             }
 
-            // Gestion du clic
-            itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onItemClick(annonce);
+            // Gestion de l'icône favori
+            updateFavoriIcon(annonce.isEstFavori());
+
+            // Clic sur l'icône favori
+            imageViewFavori.setOnClickListener(v -> {
+                if (favoriListener != null) {
+                    favoriListener.onFavoriClick(annonce, position);
                 }
             });
+
+            // Clic sur l'item
+            itemView.setOnClickListener(v -> {
+                if (itemListener != null) {
+                    itemListener.onItemClick(annonce);
+                }
+            });
+        }
+
+        private void updateFavoriIcon(boolean estFavori) {
+            if (estFavori) {
+                imageViewFavori.setImageResource(android.R.drawable.btn_star_big_on);
+            } else {
+                imageViewFavori.setImageResource(android.R.drawable.btn_star_big_off);
+            }
         }
     }
 }

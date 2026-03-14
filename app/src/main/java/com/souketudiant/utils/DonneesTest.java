@@ -29,9 +29,6 @@ public class DonneesTest {
             utilisateur.setTelephone("0123456789");
             utilisateur.setFiliere("Informatique");
 
-            // Créer une image factice pour la démo
-            String imageFactice = genererImageFactice();
-
             Annonce annonce1 = r.createObject(Annonce.class, annonceId1);
             annonce1.setTitre("Livre de maths L1");
             annonce1.setDescription("Livre en très bon état, comme neuf. Idéal pour réviser les examens.");
@@ -39,8 +36,8 @@ public class DonneesTest {
             annonce1.setCategorie("Livres");
             annonce1.setEtat("Bon état");
             annonce1.setVendeur(utilisateur);
-            annonce1.setPhotoUrl(imageFactice);
-            annonce1.setAPhoto(true);
+            annonce1.setEstFavori(false);  // Initialisation
+            annonce1.setNombreFavoris(0);   // Initialisation
 
             Annonce annonce2 = r.createObject(Annonce.class, annonceId2);
             annonce2.setTitre("Calculatrice scientifique TI-82");
@@ -49,8 +46,8 @@ public class DonneesTest {
             annonce2.setCategorie("Calculatrices");
             annonce2.setEtat("Bon état");
             annonce2.setVendeur(utilisateur);
-            annonce2.setPhotoUrl(imageFactice);
-            annonce2.setAPhoto(true);
+            annonce2.setEstFavori(false);   // Initialisation
+            annonce2.setNombreFavoris(0);    // Initialisation
         });
     }
 

@@ -15,6 +15,7 @@ import android.widget.EditText;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -75,13 +76,53 @@ public class AccueilFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setHasFixedSize(true);
 
-        adapter = new AnnonceAdapter(Collections.emptyList(), annonce -> {
-            Intent intent = new Intent(getActivity(), DetailAnnonceActivity.class);
-            intent.putExtra("annonce_id", annonce.getId());
-            startActivity(intent);
-        });
+        adapter = new AnnonceAdapter(
+                Collections.emptyList(),
+                // Click sur l'item
+                annonce -> {
+                    Intent intent = new Intent(getActivity(), DetailAnnonceActivity.class);
+                    intent.putExtra("annonce_id", annonce.getId());
+                    startActivity(intent);
+                },
+                // Click sur le favori
+                (annonce, position) -> {
+                    toggleFavori(annonce, position);
+                }
+        );
 
         recyclerView.setAdapter(adapter);
+    }
+
+    private void toggleFavori(Annonce annonce, int position) {
+        String annonceId = annonce.getId();
+
+        realm.executeTransactionAsync(r -> {
+            Annonce annonceToUpdate = r.where(Annonce.class)
+                    .equalTo("id", annonceId)
+                    .findFirst();
+            if (annonceToUpdate != null) {
+                boolean nouveauStatut = !annonceToUpdate.isEstFavori();
+                annonceToUpdate.setEstFavori(nouveauStatut);
+
+                // Mettre à jour le compteur
+                int nouveauNombre = annonceToUpdate.getNombreFavoris() + (nouveauStatut ? 1 : -1);
+                annonceToUpdate.setNombreFavoris(Math.max(0, nouveauNombre));
+            }
+        }, () -> {
+            // Succès
+            String message = annonce.isEstFavori() ?
+                    "✅ Annonce retiree des favoris" :
+                    "❌ Annonce ajoute aux favoris";
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+
+            // Recharger les annonces pour mettre à jour l'affichage
+            chargerAnnonces();
+        }, error -> {
+            // Erreur
+            Toast.makeText(getContext(),
+                    "Erreur lors de la mise à jour des favoris",
+                    Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void setupMenu() {

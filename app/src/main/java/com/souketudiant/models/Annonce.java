@@ -27,6 +27,8 @@ public class Annonce extends RealmObject {
     private boolean estVendu;
     private String photoUrl;
     private boolean aPhoto;
+    private boolean estFavori;
+    private int nombreFavoris;
 
     // Constructeurs
     public Annonce() {
@@ -86,4 +88,10 @@ public class Annonce extends RealmObject {
 
     public boolean isAPhoto() { return aPhoto; }
     public void setAPhoto(boolean aPhoto) { this.aPhoto = aPhoto; }
+
+    public boolean isEstFavori() { return estFavori; }
+    public void setEstFavori(boolean estFavori) { this.estFavori = estFavori; }
+
+    public int getNombreFavoris() { return nombreFavoris; }
+    public void setNombreFavoris(int nombreFavoris) { this.nombreFavoris = nombreFavoris; }
 }

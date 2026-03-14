@@ -58,6 +58,16 @@
                     android:textStyle="bold"
                     android:textColor="@color/design_default_color_primary"
                     android:layout_marginStart="8dp" />
+
+                <!-- AJOUT: Icône favori -->
+                <ImageView
+                    android:id="@+id/imageViewFavori"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/btn_star_big_off"
+                    android:contentDescription="Favori"
+                    android:clickable="true"
+                    android:focusable="true" />
             </LinearLayout>
 
             <!-- Description (2 lignes max) -->
