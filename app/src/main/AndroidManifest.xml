@@ -2,13 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions pour la caméra et le stockage -->
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
-    <!-- Feature caméra (optionnelle) -->
     <uses-feature android:name="android.hardware.camera"
         android:required="false" />
 
@@ -23,18 +22,37 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SoukEtudiant"
         tools:targetApi="31">
-        <activity
-            android:name=".DetailAnnonceActivity"
-            android:parentActivityName=".MainActivity" />
 
+        <!-- LoginActivity est l'activité principale -->
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" /> <!-- exported="false" car accessible seulement après connexion -->
+
+        <activity
+            android:name=".DetailAnnonceActivity"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".MesAnnoncesActivity"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".ModifierAnnonceActivity"
+            android:parentActivityName=".MesAnnoncesActivity" />
+
+        <activity
+            android:name=".ConversationActivity"
+            android:parentActivityName=".DetailAnnonceActivity" />
+
     </application>
 
 </manifest>

@@ -3,6 +3,7 @@ package com.souketudiant.fragments;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -78,51 +79,18 @@ public class AccueilFragment extends Fragment {
 
         adapter = new AnnonceAdapter(
                 Collections.emptyList(),
-                // Click sur l'item
                 annonce -> {
                     Intent intent = new Intent(getActivity(), DetailAnnonceActivity.class);
                     intent.putExtra("annonce_id", annonce.getId());
                     startActivity(intent);
                 },
-                // Click sur le favori
                 (annonce, position) -> {
+                    // Gestion des favoris
                     toggleFavori(annonce, position);
                 }
         );
 
         recyclerView.setAdapter(adapter);
-    }
-
-    private void toggleFavori(Annonce annonce, int position) {
-        String annonceId = annonce.getId();
-
-        realm.executeTransactionAsync(r -> {
-            Annonce annonceToUpdate = r.where(Annonce.class)
-                    .equalTo("id", annonceId)
-                    .findFirst();
-            if (annonceToUpdate != null) {
-                boolean nouveauStatut = !annonceToUpdate.isEstFavori();
-                annonceToUpdate.setEstFavori(nouveauStatut);
-
-                // Mettre à jour le compteur
-                int nouveauNombre = annonceToUpdate.getNombreFavoris() + (nouveauStatut ? 1 : -1);
-                annonceToUpdate.setNombreFavoris(Math.max(0, nouveauNombre));
-            }
-        }, () -> {
-            // Succès
-            String message = annonce.isEstFavori() ?
-                    "✅ Annonce retiree des favoris" :
-                    "❌ Annonce ajoute aux favoris";
-            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
-
-            // Recharger les annonces pour mettre à jour l'affichage
-            chargerAnnonces();
-        }, error -> {
-            // Erreur
-            Toast.makeText(getContext(),
-                    "Erreur lors de la mise à jour des favoris",
-                    Toast.LENGTH_SHORT).show();
-        });
     }
 
     private void setupMenu() {
@@ -131,7 +99,6 @@ public class AccueilFragment extends Fragment {
             public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
                 menuInflater.inflate(R.menu.menu_accueil, menu);
 
-                // Configuration de la recherche
                 MenuItem searchItem = menu.findItem(R.id.action_search);
                 SearchView searchView = (SearchView) searchItem.getActionView();
                 searchView.setQueryHint("Rechercher un article...");
@@ -170,10 +137,32 @@ public class AccueilFragment extends Fragment {
         }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
     }
 
+    private void toggleFavori(Annonce annonce, int position) {
+        String annonceId = annonce.getId();
+
+        realm.executeTransactionAsync(r -> {
+            Annonce annonceToUpdate = r.where(Annonce.class)
+                    .equalTo("id", annonceId)
+                    .findFirst();
+            if (annonceToUpdate != null) {
+                boolean nouveauStatut = !annonceToUpdate.isEstFavori();
+                annonceToUpdate.setEstFavori(nouveauStatut);
+
+                int nouveauNombre = annonceToUpdate.getNombreFavoris() + (nouveauStatut ? 1 : -1);
+                annonceToUpdate.setNombreFavoris(Math.max(0, nouveauNombre));
+            }
+        }, () -> {
+            String message = annonce.isEstFavori() ?
+                    "✅ Ajouté aux favoris" :
+                    "❌ Retiré des favoris";
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+            chargerAnnonces();
+        });
+    }
+
     private void showFilterDialog() {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_filtres, null);
 
-        // Initialiser les vues
         Spinner spinnerCategorie = dialogView.findViewById(R.id.spinnerCategorie);
         EditText editTextPrixMin = dialogView.findViewById(R.id.editTextPrixMin);
         EditText editTextPrixMax = dialogView.findViewById(R.id.editTextPrixMax);
@@ -201,7 +190,6 @@ public class AccueilFragment extends Fragment {
         editTextPrixMin.setText(String.valueOf(prixMinFilter));
         editTextPrixMax.setText(String.valueOf(prixMaxFilter));
 
-        // Pré-sélectionner l'état
         switch (etatFilter) {
             case "Neuf":
                 radioGroupEtat.check(R.id.radioNeuf);
@@ -221,7 +209,6 @@ public class AccueilFragment extends Fragment {
                 .setTitle("Filtres")
                 .setView(dialogView)
                 .setPositiveButton("Appliquer", (dialog, which) -> {
-                    // Récupérer les valeurs
                     categorieFilter = spinnerCategorie.getSelectedItem().toString();
 
                     try {
@@ -247,7 +234,6 @@ public class AccueilFragment extends Fragment {
                         etatFilter = "Tous";
                     }
 
-                    // Mettre à jour l'affichage
                     updateFilterDisplay();
                     chargerAnnonces();
                 })
@@ -264,7 +250,6 @@ public class AccueilFragment extends Fragment {
         prixMinFilter = 0;
         prixMaxFilter = 1000;
         etatFilter = "Tous";
-
         updateFilterDisplay();
         chargerAnnonces();
     }
@@ -297,6 +282,7 @@ public class AccueilFragment extends Fragment {
     }
 
     private void chargerAnnonces() {
+        // ICI LA CORRECTION : NE PAS FILTRER PAR UTILISATEUR !
         RealmQuery<Annonce> query = realm.where(Annonce.class);
 
         // Filtre par recherche texte
@@ -324,9 +310,13 @@ public class AccueilFragment extends Fragment {
         // Ne montrer que les annonces non vendues
         query = query.equalTo("estVendu", false);
 
+        // ⚠️ PAS DE FILTRE PAR UTILISATEUR ICI !
+        // On veut TOUTES les annonces de TOUS les utilisateurs
+
         annonces = query.findAllAsync();
 
         annonces.addChangeListener(collection -> {
+            Log.d("AccueilFragment", "Nombre d'annonces chargées: " + collection.size());
             adapter.updateData(realm.copyFromRealm(collection));
         });
     }

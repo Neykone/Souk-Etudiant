@@ -16,22 +16,29 @@ public class Utilisateur extends RealmObject {
     @Required
     private String email;
 
+    @Required
+    private String motDePasse;  // Ajout du champ mot de passe
+
     private String telephone;
     private String filiere;
     private Date dateInscription;
     private String photoUrl;
+    private boolean estConnecte;  // Pour savoir si l'utilisateur est connecté
 
     // Constructeurs
     public Utilisateur() {
         this.id = java.util.UUID.randomUUID().toString();
         this.dateInscription = new Date();
+        this.estConnecte = false;
     }
 
-    public Utilisateur(String nom, String email) {
+    public Utilisateur(String nom, String email, String motDePasse) {
         this.id = java.util.UUID.randomUUID().toString();
         this.nom = nom;
         this.email = email;
+        this.motDePasse = motDePasse;
         this.dateInscription = new Date();
+        this.estConnecte = false;
     }
 
     // Getters et Setters
@@ -44,6 +51,9 @@ public class Utilisateur extends RealmObject {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
+    public String getMotDePasse() { return motDePasse; }
+    public void setMotDePasse(String motDePasse) { this.motDePasse = motDePasse; }
+
     public String getTelephone() { return telephone; }
     public void setTelephone(String telephone) { this.telephone = telephone; }
 
@@ -55,4 +65,7 @@ public class Utilisateur extends RealmObject {
 
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    public boolean isEstConnecte() { return estConnecte; }
+    public void setEstConnecte(boolean estConnecte) { this.estConnecte = estConnecte; }
 }

@@ -5,19 +5,21 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.souketudiant.fragments.AccueilFragment;
 import com.souketudiant.fragments.ProfilFragment;
 import com.souketudiant.fragments.PublierFragment;
-import com.souketudiant.utils.DonneesTest;
+import com.souketudiant.models.Utilisateur;
 
 import io.realm.Realm;
 
 public class MainActivity extends AppCompatActivity {
 
     private Realm realm;
+    private Utilisateur utilisateurConnecte;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,8 +29,19 @@ public class MainActivity extends AppCompatActivity {
         // Initialisation Realm
         realm = Realm.getDefaultInstance();
 
-        // Générer des données de test si besoin
-        DonneesTest.genererDonneesTest(realm);
+        // Récupérer l'utilisateur connecté
+        String utilisateurId = getIntent().getStringExtra("utilisateur_id");
+        if (utilisateurId != null) {
+            utilisateurConnecte = realm.where(Utilisateur.class)
+                    .equalTo("id", utilisateurId)
+                    .findFirst();
+        }
+
+        // Si pas d'utilisateur connecté, retourner à Login
+        if (utilisateurConnecte == null) {
+            retournerALogin();
+            return;
+        }
 
         // Configuration de la navigation
         setupBottomNavigation();
@@ -54,6 +67,11 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (fragment != null) {
+                // Passer l'utilisateur connecté au fragment
+                Bundle bundle = new Bundle();
+                bundle.putString("utilisateur_id", utilisateurConnecte.getId());
+                fragment.setArguments(bundle);
+
                 chargerFragment(fragment);
                 return true;
             }
@@ -66,6 +84,17 @@ public class MainActivity extends AppCompatActivity {
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         transaction.replace(R.id.fragment_container, fragment);
         transaction.commit();
+    }
+
+    public void retournerALogin() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish(); // Bien finir MainActivity
+    }
+
+    public Utilisateur getUtilisateurConnecte() {
+        return utilisateurConnecte;
     }
 
     @Override

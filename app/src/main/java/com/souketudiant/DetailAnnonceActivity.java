@@ -1,5 +1,6 @@
 package com.souketudiant;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
@@ -134,9 +135,14 @@ public class DetailAnnonceActivity extends AppCompatActivity {
 
     private void setupButtons() {
         buttonContacter.setOnClickListener(v -> {
-            Toast.makeText(this,
-                    "Fonctionnalité de contact à venir",
-                    Toast.LENGTH_SHORT).show();
+            if (annonce.getVendeur() != null) {
+                Intent intent = new Intent(this, ConversationActivity.class);
+                intent.putExtra("annonce_id", annonce.getId());
+                intent.putExtra("vendeur_id", annonce.getVendeur().getId());
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "Vendeur non identifié", Toast.LENGTH_SHORT).show();
+            }
         });
 
         buttonFavoris.setOnClickListener(v -> {
