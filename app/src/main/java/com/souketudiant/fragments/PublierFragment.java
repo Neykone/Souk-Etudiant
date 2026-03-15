@@ -30,6 +30,7 @@ import com.souketudiant.utils.Categories;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Date;
 
 import io.realm.Realm;
 
@@ -57,8 +58,16 @@ public class PublierFragment extends Fragment {
 
         realm = Realm.getDefaultInstance();
 
-        // Récupérer ou créer un utilisateur pour la démo
-        utilisateurCourant = getUtilisateurTest();
+        // IMPORTANT: Récupérer l'utilisateur CONNECTÉ, pas le premier utilisateur
+        utilisateurCourant = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true)
+                .findFirst();
+
+        // Vérifier que l'utilisateur est connecté
+        if (utilisateurCourant == null) {
+            Toast.makeText(getContext(), "Erreur: Vous devez être connecté", Toast.LENGTH_LONG).show();
+            // Rediriger vers login si nécessaire
+        }
 
         initViews(view);
         setupSpinners();
@@ -129,23 +138,16 @@ public class PublierFragment extends Fragment {
                 Bitmap bitmap = null;
 
                 if (requestCode == REQUEST_IMAGE_CAPTURE) {
-                    // Photo de l'appareil photo
                     Bundle extras = data.getExtras();
                     bitmap = (Bitmap) extras.get("data");
                 } else if (requestCode == REQUEST_IMAGE_GALLERY) {
-                    // Photo de la galerie
                     Uri selectedImage = data.getData();
                     bitmap = MediaStore.Images.Media.getBitmap(requireActivity().getContentResolver(), selectedImage);
                 }
 
                 if (bitmap != null) {
-                    // Redimensionner pour éviter les problèmes de mémoire
                     bitmap = resizeBitmap(bitmap, 300, 300);
-
-                    // Afficher l'aperçu
                     imageViewApercu.setImageBitmap(bitmap);
-
-                    // Convertir en Base64 pour stockage
                     photoBase64 = bitmapToBase64(bitmap);
                 }
 
@@ -177,29 +179,13 @@ public class PublierFragment extends Fragment {
         return Base64.encodeToString(byteArray, Base64.DEFAULT);
     }
 
-    private Utilisateur getUtilisateurTest() {
-        // Important: findFirst() retourne un objet géré par Realm
-        Utilisateur utilisateur = realm.where(Utilisateur.class).findFirst();
-
-        if (utilisateur == null) {
-            // Créer un utilisateur de test dans une transaction
-            realm.executeTransaction(r -> {
-                String userId = java.util.UUID.randomUUID().toString();
-                Utilisateur u = r.createObject(Utilisateur.class, userId);
-                u.setNom("Étudiant Test");
-                u.setEmail("test@etudiant.univ.fr");
-                u.setTelephone("0123456789");
-                u.setFiliere("Informatique");
-            });
-            // Récupérer l'utilisateur fraîchement créé
-            utilisateur = realm.where(Utilisateur.class).findFirst();
+    private void publierAnnonce() {
+        // Vérifier que l'utilisateur est connecté
+        if (utilisateurCourant == null) {
+            Toast.makeText(getContext(), "Erreur: Utilisateur non connecté", Toast.LENGTH_LONG).show();
+            return;
         }
 
-        return utilisateur; // Cet objet est attaché au Realm
-    }
-
-    private void publierAnnonce() {
-        // Validation des champs (inchangée)
         String titre = editTextTitre.getText().toString().trim();
         String prixStr = editTextPrix.getText().toString().trim();
         String description = editTextDescription.getText().toString().trim();
@@ -234,10 +220,8 @@ public class PublierFragment extends Fragment {
             return;
         }
 
-        // Récupérer l'ID de l'utilisateur (pas l'objet entier)
         String utilisateurId = utilisateurCourant.getId();
 
-        // Boîte de dialogue de confirmation
         new AlertDialog.Builder(requireContext())
                 .setTitle("Confirmation")
                 .setMessage("Voulez-vous publier cette annonce ?")
@@ -253,7 +237,6 @@ public class PublierFragment extends Fragment {
         String annonceId = java.util.UUID.randomUUID().toString();
 
         realm.executeTransactionAsync(r -> {
-            // Récupérer l'utilisateur dans cette transaction
             Utilisateur vendeur = r.where(Utilisateur.class)
                     .equalTo("id", utilisateurId)
                     .findFirst();
@@ -265,32 +248,29 @@ public class PublierFragment extends Fragment {
                 annonce.setDescription(description);
                 annonce.setCategorie(categorie);
                 annonce.setEtat(etat);
-                annonce.setVendeur(vendeur);  // Maintenant vendeur est dans la même transaction
+                annonce.setVendeur(vendeur);
                 annonce.setPhotoUrl(photoBase64);
                 annonce.setAPhoto(!photoBase64.isEmpty());
+                annonce.setDatePublication(new Date());
+                annonce.setEstVendu(false);
+                annonce.setEstFavori(false);
+                annonce.setNombreFavoris(0);
             }
         }, () -> {
-            // Succès
             Toast.makeText(getContext(), "Annonce publiée avec succès!", Toast.LENGTH_LONG).show();
 
-            // Réinitialiser le formulaire (sur le thread UI)
-            requireActivity().runOnUiThread(() -> {
-                editTextTitre.setText("");
-                editTextPrix.setText("");
-                editTextDescription.setText("");
-                autoCompleteCategorie.setText("");
-                autoCompleteEtat.setText("");
-                imageViewApercu.setImageResource(R.drawable.ic_book_placeholder);
-                photoBase64 = "";
-            });
-
+            // Réinitialiser le formulaire
+            editTextTitre.setText("");
+            editTextPrix.setText("");
+            editTextDescription.setText("");
+            autoCompleteCategorie.setText("");
+            autoCompleteEtat.setText("");
+            imageViewApercu.setImageResource(R.drawable.ic_book_placeholder);
+            photoBase64 = "";
         }, error -> {
-            // Erreur
-            requireActivity().runOnUiThread(() -> {
-                Toast.makeText(getContext(),
-                        "Erreur lors de la publication: " + error.getMessage(),
-                        Toast.LENGTH_LONG).show();
-            });
+            Toast.makeText(getContext(),
+                    "Erreur lors de la publication: " + error.getMessage(),
+                    Toast.LENGTH_LONG).show();
         });
     }
 
