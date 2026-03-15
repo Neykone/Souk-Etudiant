@@ -39,6 +39,17 @@
         android:padding="8dp"
         android:background="@color/white">
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonPartagerLocalisation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:icon="@android:drawable/ic_menu_mylocation"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.Material3.Button.IconButton" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"

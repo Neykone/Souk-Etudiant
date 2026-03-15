@@ -22,11 +22,17 @@ public class Message extends RealmObject {
     private Utilisateur expediteur;
     private Utilisateur destinataire;
 
+    private String type; // "text" ou "location"
+    private double latitude;
+    private double longitude;
+    private String lieuNom;
+
     // Constructeur par défaut requis par Realm
     public Message() {
         this.id = UUID.randomUUID().toString();
         this.dateEnvoi = new Date();
         this.estLu = false;
+        this.type = "text"; // Par défaut
     }
 
     // Getters et Setters
@@ -85,4 +91,16 @@ public class Message extends RealmObject {
     public void setDestinataire(Utilisateur destinataire) {
         this.destinataire = destinataire;
     }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
+
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
+
+    public String getLieuNom() { return lieuNom; }
+    public void setLieuNom(String lieuNom) { this.lieuNom = lieuNom; }
 }

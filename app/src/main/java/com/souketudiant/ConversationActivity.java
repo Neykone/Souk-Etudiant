@@ -1,23 +1,37 @@
 package com.souketudiant;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.button.MaterialButton;
 import com.souketudiant.adapters.MessageAdapter;
 import com.souketudiant.models.Annonce;
 import com.souketudiant.models.Message;
 import com.souketudiant.models.Utilisateur;
 
+import java.io.IOException;
 import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 import io.realm.Realm;
 import io.realm.RealmResults;
@@ -26,12 +40,14 @@ import io.realm.Sort;
 public class ConversationActivity extends AppCompatActivity {
 
     private static final String TAG = "ConversationActivity";
+    private static final int PERMISSION_LOCATION_CODE = 500;
 
     private Realm realm;
     private RecyclerView recyclerView;
     private MessageAdapter adapter;
     private EditText editTextMessage;
     private MaterialButton buttonEnvoyer;
+    private MaterialButton buttonPartagerLocalisation;
     private TextView textViewTitre;
 
     private Annonce annonce;
@@ -42,6 +58,7 @@ public class ConversationActivity extends AppCompatActivity {
     private String acheteurId;
 
     private RealmResults<Message> messages;
+    private FusedLocationProviderClient fusedLocationClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +97,9 @@ public class ConversationActivity extends AppCompatActivity {
             // Initialisation Realm
             realm = Realm.getDefaultInstance();
             Log.d(TAG, "Realm initialisé");
+
+            // Initialiser le client de localisation
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
             // Charger les données
             chargerDonnees();
@@ -132,9 +152,17 @@ public class ConversationActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerViewMessages);
         editTextMessage = findViewById(R.id.editTextMessage);
         buttonEnvoyer = findViewById(R.id.buttonEnvoyer);
+        buttonPartagerLocalisation = findViewById(R.id.buttonPartagerLocalisation);
         textViewTitre = findViewById(R.id.textViewTitre);
 
         textViewTitre.setText("Discussion avec " + vendeur.getNom());
+
+        // Vérifier que le bouton n'est pas null
+        if (buttonPartagerLocalisation != null) {
+            buttonPartagerLocalisation.setOnClickListener(v -> partagerLocalisation());
+        } else {
+            Log.e(TAG, "buttonPartagerLocalisation est null !");
+        }
     }
 
     private void setupRecyclerView() {
@@ -149,16 +177,17 @@ public class ConversationActivity extends AppCompatActivity {
         try {
             Log.d(TAG, "Chargement des messages...");
 
-            // Récupérer les messages
+            // IMPORTANT: Récupérer TOUS les messages de cette conversation
             messages = realm.where(Message.class)
-                    .beginGroup()
-                    .equalTo("annonce.id", annonceId)
-                    .and()
+                    .equalTo("annonce.id", annonceId)  // Même annonce
                     .beginGroup()
                     .equalTo("expediteur.id", acheteurId)
                     .or()
                     .equalTo("expediteur.id", vendeurId)
-                    .endGroup()
+                    .or()
+                    .equalTo("destinataire.id", acheteurId)
+                    .or()
+                    .equalTo("destinataire.id", vendeurId)
                     .endGroup()
                     .sort("dateEnvoi", Sort.ASCENDING)
                     .findAllAsync();
@@ -167,7 +196,7 @@ public class ConversationActivity extends AppCompatActivity {
             messages.addChangeListener(collection -> {
                 Log.d(TAG, "Messages mis à jour: " + collection.size());
 
-                // Copier les messages pour l'adapter (dans le thread UI)
+                // Afficher tous les messages dans l'ordre chronologique
                 adapter.updateData(realm.copyFromRealm(collection));
 
                 // Scroll en bas pour voir le dernier message
@@ -175,7 +204,7 @@ public class ConversationActivity extends AppCompatActivity {
                     recyclerView.scrollToPosition(collection.size() - 1);
                 }
 
-                // Marquer les messages comme lus (dans un thread background)
+                // Marquer les messages comme lus
                 marquerMessagesCommeLus();
             });
 
@@ -187,18 +216,15 @@ public class ConversationActivity extends AppCompatActivity {
     }
 
     private void marquerMessagesCommeLus() {
-        // Récupérer les IDs dans le thread UI
         String annonceIdLocal = annonceId;
         String acheteurIdLocal = acheteurId;
-        String vendeurIdLocal = vendeurId;
 
-        if (annonceIdLocal == null || acheteurIdLocal == null || vendeurIdLocal == null) {
+        if (annonceIdLocal == null || acheteurIdLocal == null) {
             Log.e(TAG, "IDs manquants pour marquer les messages comme lus");
             return;
         }
 
         realm.executeTransactionAsync(r -> {
-            // Dans le thread background, on refait une requête propre
             RealmResults<Message> messagesNonLus = r.where(Message.class)
                     .equalTo("annonce.id", annonceIdLocal)
                     .equalTo("estLu", false)
@@ -218,6 +244,7 @@ public class ConversationActivity extends AppCompatActivity {
 
     private void setupClickListeners() {
         buttonEnvoyer.setOnClickListener(v -> envoyerMessage());
+        buttonPartagerLocalisation.setOnClickListener(v -> partagerLocalisation());
     }
 
     private void envoyerMessage() {
@@ -228,78 +255,172 @@ public class ConversationActivity extends AppCompatActivity {
             return;
         }
 
-        // Désactiver le bouton
         buttonEnvoyer.setEnabled(false);
 
         String messageId = java.util.UUID.randomUUID().toString();
         Date maintenant = new Date();
 
-        // Récupérer les IDs dans le thread UI
         String annonceIdLocal = annonceId;
         String acheteurIdLocal = acheteurId;
         String vendeurIdLocal = vendeurId;
 
         Log.d(TAG, "Envoi du message: " + contenu);
 
-        realm.executeTransactionAsync(new Realm.Transaction() {
-            @Override
-            public void execute(Realm bgRealm) {
-                // Dans le thread background, on récupère les objets à nouveau
-                Annonce bgAnnonce = bgRealm.where(Annonce.class).equalTo("id", annonceIdLocal).findFirst();
-                Utilisateur bgExpediteur = bgRealm.where(Utilisateur.class).equalTo("id", acheteurIdLocal).findFirst();
-                Utilisateur bgDestinataire = bgRealm.where(Utilisateur.class).equalTo("id", vendeurIdLocal).findFirst();
+        realm.executeTransactionAsync(r -> {
+            Annonce bgAnnonce = r.where(Annonce.class).equalTo("id", annonceIdLocal).findFirst();
+            Utilisateur bgExpediteur = r.where(Utilisateur.class).equalTo("id", acheteurIdLocal).findFirst();
+            Utilisateur bgDestinataire = r.where(Utilisateur.class).equalTo("id", vendeurIdLocal).findFirst();
 
-                if (bgAnnonce != null && bgExpediteur != null && bgDestinataire != null) {
-                    Message message = bgRealm.createObject(Message.class, messageId);
-                    message.setContenu(contenu);
-                    message.setAnnonce(bgAnnonce);
-                    message.setExpediteur(bgExpediteur);
-                    message.setDestinataire(bgDestinataire);
-                    message.setDateEnvoi(maintenant);
-                    message.setEstLu(false);
+            if (bgAnnonce != null && bgExpediteur != null && bgDestinataire != null) {
+                Message message = r.createObject(Message.class, messageId);
+                message.setType("text");
+                message.setContenu(contenu);
+                message.setAnnonce(bgAnnonce);
+                message.setExpediteur(bgExpediteur);
+                message.setDestinataire(bgDestinataire);
+                message.setDateEnvoi(maintenant);
+                message.setEstLu(false);
+            }
+        }, () -> {
+            Log.d(TAG, "Message envoyé avec succès");
+            editTextMessage.setText("");
+            buttonEnvoyer.setEnabled(true);
+        }, error -> {
+            Log.e(TAG, "Erreur lors de l'envoi: " + error.getMessage(), error);
+            buttonEnvoyer.setEnabled(true);
+            Toast.makeText(ConversationActivity.this, "Erreur lors de l'envoi", Toast.LENGTH_SHORT).show();
+        });
+    }
 
-                    Log.d(TAG, "Message créé avec ID: " + messageId);
-                } else {
-                    Log.e(TAG, "Erreur: objets non trouvés dans la transaction");
+    private void partagerLocalisation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSION_LOCATION_CODE);
+            return;
+        }
+
+        obtenirLocalisation();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == PERMISSION_LOCATION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                obtenirLocalisation();
+            } else {
+                Toast.makeText(this, "Permission de localisation refusée", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void obtenirLocalisation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        buttonPartagerLocalisation.setEnabled(false);
+        Toast.makeText(this, "Obtention de la position...", Toast.LENGTH_SHORT).show();
+
+        Task<Location> locationTask = fusedLocationClient.getLastLocation();
+        locationTask.addOnSuccessListener(location -> {
+            buttonPartagerLocalisation.setEnabled(true);
+
+            if (location != null) {
+                String lieuNom = getLieuName(location.getLatitude(), location.getLongitude());
+                envoyerLocalisation(location.getLatitude(), location.getLongitude(), lieuNom);
+            } else {
+                Toast.makeText(this,
+                        "Impossible d'obtenir la position. Vérifiez que le GPS est activé.",
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+
+        locationTask.addOnFailureListener(e -> {
+            buttonPartagerLocalisation.setEnabled(true);
+            Toast.makeText(this, "Erreur de localisation: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private String getLieuName(double latitude, double longitude) {
+        try {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+
+            if (addresses != null && !addresses.isEmpty()) {
+                Address address = addresses.get(0);
+                StringBuilder sb = new StringBuilder();
+                if (address.getThoroughfare() != null) {
+                    sb.append(address.getThoroughfare());
                 }
+                if (address.getLocality() != null) {
+                    if (sb.length() > 0) sb.append(", ");
+                    sb.append(address.getLocality());
+                }
+                return sb.length() > 0 ? sb.toString() : "Position partagée";
             }
-        }, new Realm.Transaction.OnSuccess() {
-            @Override
-            public void onSuccess() {
-                Log.d(TAG, "Message envoyé avec succès");
-                editTextMessage.setText("");
-                buttonEnvoyer.setEnabled(true);
-                Toast.makeText(ConversationActivity.this, "Message envoyé", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "Position partagée";
+    }
+
+    private void envoyerLocalisation(double latitude, double longitude, String lieuNom) {
+        String messageId = java.util.UUID.randomUUID().toString();
+        Date maintenant = new Date();
+
+        String annonceIdLocal = annonceId;
+        String acheteurIdLocal = acheteurId;
+        String vendeurIdLocal = vendeurId;
+
+        realm.executeTransactionAsync(r -> {
+            Annonce bgAnnonce = r.where(Annonce.class).equalTo("id", annonceIdLocal).findFirst();
+            Utilisateur bgExpediteur = r.where(Utilisateur.class).equalTo("id", acheteurIdLocal).findFirst();
+            Utilisateur bgDestinataire = r.where(Utilisateur.class).equalTo("id", vendeurIdLocal).findFirst();
+
+            if (bgAnnonce != null && bgExpediteur != null && bgDestinataire != null) {
+                Message message = r.createObject(Message.class, messageId);
+                message.setType("location");  // IMPORTANT: bien mettre le type
+                message.setLatitude(latitude);
+                message.setLongitude(longitude);
+                message.setLieuNom(lieuNom);
+                message.setContenu(null);    // Pas de contenu texte
+                message.setAnnonce(bgAnnonce);
+                message.setExpediteur(bgExpediteur);
+                message.setDestinataire(bgDestinataire);
+                message.setDateEnvoi(maintenant);
+                message.setEstLu(false);
             }
-        }, new Realm.Transaction.OnError() {
-            @Override
-            public void onError(Throwable error) {
-                Log.e(TAG, "Erreur lors de l'envoi: " + error.getMessage(), error);
-                buttonEnvoyer.setEnabled(true);
-                Toast.makeText(ConversationActivity.this, "Erreur lors de l'envoi", Toast.LENGTH_SHORT).show();
-            }
+        }, () -> {
+            Toast.makeText(ConversationActivity.this,
+                    "📍 Position partagée avec succès", Toast.LENGTH_SHORT).show();
+        }, error -> {
+            Toast.makeText(ConversationActivity.this,
+                    "Erreur lors du partage de position", Toast.LENGTH_SHORT).show();
         });
     }
 
     @Override
     public boolean onSupportNavigateUp() {
-        Log.d(TAG, "onSupportNavigateUp");
+        setResult(RESULT_OK);
         finish();
         return true;
     }
 
     @Override
     public void onBackPressed() {
-        Log.d(TAG, "onBackPressed");
+        setResult(RESULT_OK);
         finish();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "onDestroy");
-
-        // Nettoyer les listeners
         if (messages != null) {
             messages.removeAllChangeListeners();
         }
