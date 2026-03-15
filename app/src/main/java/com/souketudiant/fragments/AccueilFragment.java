@@ -18,6 +18,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
@@ -50,6 +53,9 @@ public class AccueilFragment extends Fragment {
     private RealmResults<Annonce> annonces;
     private TextView textViewFiltreActif;
 
+    // Launcher pour DetailAnnonceActivity
+    private ActivityResultLauncher<Intent> detailLauncher;
+
     // Variables pour les filtres
     private String rechercheText = "";
     private String categorieFilter = "Tous";
@@ -61,6 +67,15 @@ public class AccueilFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_accueil, container, false);
+
+        // Enregistrer le launcher — doit être fait avant tout startActivity
+        detailLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    // Retour de DetailAnnonceActivity — rafraîchir la liste
+                    chargerAnnonces();
+                }
+        );
 
         realm = Realm.getDefaultInstance();
         textViewFiltreActif = view.findViewById(R.id.textViewFiltreActif);
@@ -82,7 +97,7 @@ public class AccueilFragment extends Fragment {
                 annonce -> {
                     Intent intent = new Intent(getActivity(), DetailAnnonceActivity.class);
                     intent.putExtra("annonce_id", annonce.getId());
-                    startActivity(intent);
+                    detailLauncher.launch(intent);
                 },
                 (annonce, position) -> {
                     // Gestion des favoris

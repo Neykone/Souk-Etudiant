@@ -7,7 +7,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,7 +15,6 @@ import com.google.android.material.tabs.TabLayout;
 import com.souketudiant.models.Utilisateur;
 
 import io.realm.Realm;
-import io.realm.RealmQuery;
 import io.realm.RealmResults;
 
 public class LoginActivity extends AppCompatActivity {
@@ -71,12 +69,10 @@ public class LoginActivity extends AppCompatActivity {
         registerView = findViewById(R.id.registerView);
         progressBar = findViewById(R.id.progressBar);
 
-        // Vues de connexion
         editTextLoginEmail = findViewById(R.id.editTextLoginEmail);
         editTextLoginPassword = findViewById(R.id.editTextLoginPassword);
         buttonLogin = findViewById(R.id.buttonLogin);
 
-        // Vues d'inscription
         editTextRegisterNom = findViewById(R.id.editTextRegisterNom);
         editTextRegisterEmail = findViewById(R.id.editTextRegisterEmail);
         editTextRegisterPassword = findViewById(R.id.editTextRegisterPassword);
@@ -94,11 +90,9 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 if (tab.getPosition() == 0) {
-                    // Onglet Connexion
                     loginView.setVisibility(View.VISIBLE);
                     registerView.setVisibility(View.GONE);
                 } else {
-                    // Onglet Inscription
                     loginView.setVisibility(View.GONE);
                     registerView.setVisibility(View.VISIBLE);
                 }
@@ -121,7 +115,6 @@ public class LoginActivity extends AppCompatActivity {
         String email = editTextLoginEmail.getText().toString().trim();
         String password = editTextLoginPassword.getText().toString().trim();
 
-        // Validation
         if (TextUtils.isEmpty(email)) {
             editTextLoginEmail.setError("Email requis");
             return;
@@ -134,61 +127,30 @@ public class LoginActivity extends AppCompatActivity {
 
         showProgress(true);
 
-        // Rechercher l'utilisateur dans Realm (synchronously d'abord pour vérifier)
+        // Rechercher l'utilisateur
         Utilisateur utilisateur = realm.where(Utilisateur.class)
                 .equalTo("email", email)
                 .equalTo("motDePasse", password)
                 .findFirst();
 
         if (utilisateur != null) {
-            // Utilisateur trouvé, procéder à la connexion
-            String userId = utilisateur.getId();
-
             // Mettre à jour le statut de connexion
-            realm.executeTransactionAsync(new Realm.Transaction() {
-                @Override
-                public void execute(Realm bgRealm) {
-                    // Déconnecter tous les autres utilisateurs
-                    RealmResults<Utilisateur> utilisateursConnectes = bgRealm.where(Utilisateur.class)
-                            .equalTo("estConnecte", true)
-                            .findAll();
-                    for (Utilisateur u : utilisateursConnectes) {
-                        u.setEstConnecte(false);
-                    }
-
-                    // Connecter l'utilisateur courant
-                    Utilisateur user = bgRealm.where(Utilisateur.class)
-                            .equalTo("id", userId)
-                            .findFirst();
-                    if (user != null) {
-                        user.setEstConnecte(true);
-                    }
+            realm.executeTransaction(r -> {
+                // Déconnecter tous les autres
+                RealmResults<Utilisateur> connectes = r.where(Utilisateur.class)
+                        .equalTo("estConnecte", true)
+                        .findAll();
+                for (Utilisateur u : connectes) {
+                    u.setEstConnecte(false);
                 }
-            }, new Realm.Transaction.OnSuccess() {
-                @Override
-                public void onSuccess() {
-                    showProgress(false);
-                    Toast.makeText(LoginActivity.this, "Connexion réussie !", Toast.LENGTH_SHORT).show();
 
-                    // Récupérer l'utilisateur à jour
-                    Utilisateur userConnected = realm.where(Utilisateur.class)
-                            .equalTo("id", userId)
-                            .findFirst();
-                    startMainActivity(userConnected);
-                }
-            }, new Realm.Transaction.OnError() {
-                @Override
-                public void onError(Throwable error) {
-                    showProgress(false);
-                    error.printStackTrace();
-                    Toast.makeText(LoginActivity.this,
-                            "Erreur lors de la connexion: " + error.getMessage(),
-                            Toast.LENGTH_LONG).show();
-
-                    // Essayer quand même de démarrer l'activité
-                    startMainActivity(utilisateur);
-                }
+                // Connecter celui-ci
+                utilisateur.setEstConnecte(true);
             });
+
+            showProgress(false);
+            Toast.makeText(this, "Connexion réussie !", Toast.LENGTH_SHORT).show();
+            startMainActivity(utilisateur);
         } else {
             showProgress(false);
             Toast.makeText(this, "Email ou mot de passe incorrect", Toast.LENGTH_LONG).show();
@@ -200,10 +162,7 @@ public class LoginActivity extends AppCompatActivity {
         String email = editTextRegisterEmail.getText().toString().trim();
         String password = editTextRegisterPassword.getText().toString().trim();
         String confirmPassword = editTextRegisterConfirmPassword.getText().toString().trim();
-        String telephone = editTextRegisterTelephone.getText().toString().trim();
-        String filiere = editTextRegisterFiliere.getText().toString().trim();
 
-        // Validations
         if (TextUtils.isEmpty(nom)) {
             editTextRegisterNom.setError("Nom requis");
             return;
@@ -250,12 +209,12 @@ public class LoginActivity extends AppCompatActivity {
         // Créer le nouvel utilisateur
         String userId = java.util.UUID.randomUUID().toString();
 
-        realm.executeTransactionAsync(r -> {
+        realm.executeTransaction(r -> {
             // Déconnecter tous les utilisateurs existants
-            RealmResults<Utilisateur> utilisateursConnectes = r.where(Utilisateur.class)
+            RealmResults<Utilisateur> connectes = r.where(Utilisateur.class)
                     .equalTo("estConnecte", true)
                     .findAll();
-            for (Utilisateur u : utilisateursConnectes) {
+            for (Utilisateur u : connectes) {
                 u.setEstConnecte(false);
             }
 
@@ -264,23 +223,26 @@ public class LoginActivity extends AppCompatActivity {
             nouvelUtilisateur.setNom(nom);
             nouvelUtilisateur.setEmail(email);
             nouvelUtilisateur.setMotDePasse(password);
-            nouvelUtilisateur.setTelephone(telephone);
-            nouvelUtilisateur.setFiliere(filiere);
-            nouvelUtilisateur.setEstConnecte(true);
-        }, () -> {
-            showProgress(false);
-            Toast.makeText(this, "Inscription réussie !", Toast.LENGTH_LONG).show();
 
-            // Récupérer l'utilisateur créé
-            Utilisateur nouvelUtilisateur = realm.where(Utilisateur.class)
-                    .equalTo("id", userId)
-                    .findFirst();
-            startMainActivity(nouvelUtilisateur);
-        }, error -> {
-            showProgress(false);
-            Toast.makeText(this, "Erreur lors de l'inscription: " + error.getMessage(),
-                    Toast.LENGTH_LONG).show();
+            if (!TextUtils.isEmpty(editTextRegisterTelephone.getText())) {
+                nouvelUtilisateur.setTelephone(editTextRegisterTelephone.getText().toString());
+            }
+
+            if (!TextUtils.isEmpty(editTextRegisterFiliere.getText())) {
+                nouvelUtilisateur.setFiliere(editTextRegisterFiliere.getText().toString());
+            }
+
+            nouvelUtilisateur.setEstConnecte(true);
         });
+
+        showProgress(false);
+        Toast.makeText(this, "Inscription réussie !", Toast.LENGTH_LONG).show();
+
+        // Récupérer le nouvel utilisateur
+        Utilisateur nouvelUtilisateur = realm.where(Utilisateur.class)
+                .equalTo("id", userId)
+                .findFirst();
+        startMainActivity(nouvelUtilisateur);
     }
 
     private void startMainActivity(Utilisateur utilisateur) {

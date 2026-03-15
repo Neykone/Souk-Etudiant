@@ -30,6 +30,9 @@ public class Annonce extends RealmObject {
     private boolean estFavori;
     private int nombreFavoris;
 
+    private boolean aNouveauxMessages;
+    private Date dernierMessageDate;
+
     // Constructeurs
     public Annonce() {
         this.id = java.util.UUID.randomUUID().toString();
@@ -94,4 +97,10 @@ public class Annonce extends RealmObject {
 
     public int getNombreFavoris() { return nombreFavoris; }
     public void setNombreFavoris(int nombreFavoris) { this.nombreFavoris = nombreFavoris; }
+
+    public boolean isaNouveauxMessages() { return aNouveauxMessages; }
+    public void setaNouveauxMessages(boolean aNouveauxMessages) { this.aNouveauxMessages = aNouveauxMessages; }
+
+    public Date getDernierMessageDate() { return dernierMessageDate; }
+    public void setDernierMessageDate(Date dernierMessageDate) { this.dernierMessageDate = dernierMessageDate; }
 }

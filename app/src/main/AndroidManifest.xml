@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -23,35 +22,32 @@
         android:theme="@style/Theme.SoukEtudiant"
         tools:targetApi="31">
 
-        <!-- LoginActivity est l'activité principale -->
+        <!-- LoginActivity : point d'entrée, noHistory pour ne pas revenir au login après connexion -->
         <activity
             android:name=".LoginActivity"
-            android:exported="true">
+            android:exported="true"
+            android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
+        <!-- MainActivity : PAS de noHistory — doit rester dans la pile pour qu'on puisse y revenir -->
         <activity
             android:name=".MainActivity"
-            android:exported="false" /> <!-- exported="false" car accessible seulement après connexion -->
+            android:exported="false" />
 
-        <activity
-            android:name=".DetailAnnonceActivity"
-            android:parentActivityName=".MainActivity" />
+        <!-- Pas de parentActivityName — on gère la navigation nous-mêmes avec setResult+finish -->
+        <activity android:name=".DetailAnnonceActivity" />
 
-        <activity
-            android:name=".MesAnnoncesActivity"
-            android:parentActivityName=".MainActivity" />
+        <activity android:name=".MesAnnoncesActivity" />
 
-        <activity
-            android:name=".ModifierAnnonceActivity"
-            android:parentActivityName=".MesAnnoncesActivity" />
+        <activity android:name=".ModifierAnnonceActivity" />
 
-        <activity
-            android:name=".ConversationActivity"
-            android:parentActivityName=".DetailAnnonceActivity" />
+        <activity android:name=".ConversationActivity" />
+
+        <activity android:name=".ConversationsActivity" />
 
     </application>
 

@@ -55,31 +55,36 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        Message message = messages.get(position);
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.FRANCE);
+        try {
+            Message message = messages.get(position);
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.FRANCE);
 
-        if (holder instanceof MessageEnvoyeViewHolder) {
-            MessageEnvoyeViewHolder envoyeHolder = (MessageEnvoyeViewHolder) holder;
-            envoyeHolder.textViewContenu.setText(message.getContenu());
-            envoyeHolder.textViewHeure.setText(sdf.format(message.getDateEnvoi()));
+            if (holder instanceof MessageEnvoyeViewHolder) {
+                MessageEnvoyeViewHolder envoyeHolder = (MessageEnvoyeViewHolder) holder;
+                envoyeHolder.textViewContenu.setText(message.getContenu() != null ? message.getContenu() : "");
+                envoyeHolder.textViewHeure.setText(sdf.format(message.getDateEnvoi()));
 
-            // Indicateur de lecture
-            if (message.isEstLu()) {
-                envoyeHolder.textViewStatut.setText("Lu");
-                envoyeHolder.textViewStatut.setVisibility(View.VISIBLE);
-            } else {
-                envoyeHolder.textViewStatut.setText("Envoyé");
-                envoyeHolder.textViewStatut.setVisibility(View.VISIBLE);
+                if (message.isEstLu()) {
+                    envoyeHolder.textViewStatut.setText("Lu");
+                    envoyeHolder.textViewStatut.setVisibility(View.VISIBLE);
+                } else {
+                    envoyeHolder.textViewStatut.setText("Envoyé");
+                    envoyeHolder.textViewStatut.setVisibility(View.VISIBLE);
+                }
+
+            } else if (holder instanceof MessageRecuViewHolder) {
+                MessageRecuViewHolder recuHolder = (MessageRecuViewHolder) holder;
+                recuHolder.textViewContenu.setText(message.getContenu() != null ? message.getContenu() : "");
+                recuHolder.textViewHeure.setText(sdf.format(message.getDateEnvoi()));
+
+                if (message.getExpediteur() != null) {
+                    recuHolder.textViewExpediteur.setText(message.getExpediteur().getNom());
+                } else {
+                    recuHolder.textViewExpediteur.setText("Inconnu");
+                }
             }
-
-        } else if (holder instanceof MessageRecuViewHolder) {
-            MessageRecuViewHolder recuHolder = (MessageRecuViewHolder) holder;
-            recuHolder.textViewContenu.setText(message.getContenu());
-            recuHolder.textViewHeure.setText(sdf.format(message.getDateEnvoi()));
-
-            if (message.getExpediteur() != null) {
-                recuHolder.textViewExpediteur.setText(message.getExpediteur().getNom());
-            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

@@ -59,8 +59,10 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
         // Configuration de la toolbar
         androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle("Modifier l'annonce");
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Modifier l'annonce");
+        }
 
         // Récupérer l'ID de l'annonce
         annonceId = getIntent().getStringExtra("annonce_id");
@@ -100,7 +102,6 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
     }
 
     private void setupSpinners() {
-        // Catégories
         ArrayAdapter<String> categorieAdapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_dropdown_item_1line,
@@ -108,7 +109,6 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
         );
         autoCompleteCategorie.setAdapter(categorieAdapter);
 
-        // États
         ArrayAdapter<String> etatAdapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_dropdown_item_1line,
@@ -124,7 +124,6 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
         autoCompleteCategorie.setText(annonce.getCategorie(), false);
         autoCompleteEtat.setText(annonce.getEtat(), false);
 
-        // Charger l'image existante
         if (annonce.getPhotoUrl() != null && !annonce.getPhotoUrl().isEmpty()) {
             try {
                 byte[] decodedString = Base64.decode(annonce.getPhotoUrl(), Base64.DEFAULT);
@@ -178,7 +177,6 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
                 }
 
                 if (bitmap != null) {
-                    // Redimensionner
                     bitmap = resizeBitmap(bitmap, 300, 300);
                     imageViewApercu.setImageBitmap(bitmap);
                     photoBase64 = bitmapToBase64(bitmap);
@@ -214,7 +212,6 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
     }
 
     private void enregistrerModifications() {
-        // Validation des champs
         String titre = editTextTitre.getText().toString().trim();
         String prixStr = editTextPrix.getText().toString().trim();
         String description = editTextDescription.getText().toString().trim();
@@ -249,7 +246,6 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
             return;
         }
 
-        // Confirmation
         new AlertDialog.Builder(this)
                 .setTitle("Confirmation")
                 .setMessage("Voulez-vous enregistrer les modifications ?")
@@ -289,7 +285,8 @@ public class ModifierAnnonceActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
-        onBackPressed();
+        setResult(RESULT_OK);
+        finish();
         return true;
     }
 

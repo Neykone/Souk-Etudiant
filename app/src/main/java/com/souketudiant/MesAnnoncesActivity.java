@@ -38,11 +38,13 @@ public class MesAnnoncesActivity extends AppCompatActivity {
         // Configuration de la toolbar
         androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle("Mes annonces");
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Mes annonces");
+        }
 
         realm = Realm.getDefaultInstance();
-        utilisateurCourant = realm.where(Utilisateur.class).findFirst();
+        utilisateurCourant = realm.where(Utilisateur.class).equalTo("estConnecte", true).findFirst();
 
         initViews();
         setupRecyclerView();
@@ -55,10 +57,8 @@ public class MesAnnoncesActivity extends AppCompatActivity {
         buttonPublier = findViewById(R.id.buttonPublier);
 
         buttonPublier.setOnClickListener(v -> {
-            // Aller à l'onglet publication
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.putExtra("onglet", "publier");
-            startActivity(intent);
+            // Fermer cette activity pour revenir à MainActivity,
+            // puis MainActivity sélectionne l'onglet Publier
             finish();
         });
     }
@@ -69,11 +69,9 @@ public class MesAnnoncesActivity extends AppCompatActivity {
 
         adapter = new AnnonceAdapter(
                 java.util.Collections.emptyList(),
-                // Click sur l'annonce pour modifier
                 annonce -> {
                     showOptionsDialog(annonce);
                 },
-                // Click sur favori (désactivé dans cette vue)
                 (annonce, position) -> {}
         );
 
@@ -110,19 +108,15 @@ public class MesAnnoncesActivity extends AppCompatActivity {
                 .setItems(options, (dialog, which) -> {
                     switch (which) {
                         case 0:
-                            // Modifier
                             modifierAnnonce(annonce);
                             break;
                         case 1:
-                            // Marquer comme vendue
                             marquerCommeVendue(annonce);
                             break;
                         case 2:
-                            // Supprimer
                             supprimerAnnonce(annonce);
                             break;
                         case 3:
-                            // Voir détails
                             voirDetails(annonce);
                             break;
                     }
@@ -130,10 +124,21 @@ public class MesAnnoncesActivity extends AppCompatActivity {
                 .show();
     }
 
+    private static final int CODE_MODIFIER = 400;
+
     private void modifierAnnonce(Annonce annonce) {
         Intent intent = new Intent(this, ModifierAnnonceActivity.class);
         intent.putExtra("annonce_id", annonce.getId());
-        startActivity(intent);
+        startActivityForResult(intent, CODE_MODIFIER);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == CODE_MODIFIER && resultCode == RESULT_OK) {
+            // Rafraîchir la liste après modification
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private void marquerCommeVendue(Annonce annonce) {
@@ -184,7 +189,8 @@ public class MesAnnoncesActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
-        onBackPressed();
+        setResult(RESULT_OK);
+        finish();
         return true;
     }
 

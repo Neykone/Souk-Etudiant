@@ -5,14 +5,17 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Base64;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.souketudiant.models.Annonce;
+import com.souketudiant.models.Utilisateur;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -42,6 +45,14 @@ public class DetailAnnonceActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail_annonce);
 
+        // Configuration de la toolbar
+        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Détail de l'annonce");
+        }
+
         // Initialisation Realm
         realm = Realm.getDefaultInstance();
 
@@ -63,16 +74,9 @@ public class DetailAnnonceActivity extends AppCompatActivity {
             return;
         }
 
-        // Initialiser les vues
         initViews();
-
-        // Afficher les détails
         afficherDetails();
-
-        // Configurer les boutons
         setupButtons();
-        // mise a jour
-        updateFavoriButtonText();
     }
 
     private void initViews() {
@@ -90,36 +94,29 @@ public class DetailAnnonceActivity extends AppCompatActivity {
     }
 
     private void afficherDetails() {
-        // Titre
         textViewTitre.setText(annonce.getTitre());
 
-        // Prix
         NumberFormat format = NumberFormat.getCurrencyInstance(Locale.FRANCE);
         textViewPrix.setText(format.format(annonce.getPrix()));
 
-        // Catégorie et état
         textViewCategorie.setText(annonce.getCategorie());
         textViewEtat.setText(annonce.getEtat());
 
-        // Description
         if (annonce.getDescription() != null && !annonce.getDescription().isEmpty()) {
             textViewDescription.setText(annonce.getDescription());
         } else {
             textViewDescription.setText("Aucune description fournie");
         }
 
-        // Vendeur
         if (annonce.getVendeur() != null) {
             textViewVendeur.setText(annonce.getVendeur().getNom());
         } else {
             textViewVendeur.setText("Vendeur inconnu");
         }
 
-        // Date
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.FRANCE);
         textViewDate.setText("Publié le " + sdf.format(annonce.getDatePublication()));
 
-        // Image
         if (annonce.getPhotoUrl() != null && !annonce.getPhotoUrl().isEmpty()) {
             try {
                 byte[] decodedString = Base64.decode(annonce.getPhotoUrl(), Base64.DEFAULT);
@@ -131,25 +128,62 @@ public class DetailAnnonceActivity extends AppCompatActivity {
         } else {
             imageView.setImageResource(R.drawable.ic_book_placeholder);
         }
+
+        updateFavoriButtonText();
     }
 
     private void setupButtons() {
         buttonContacter.setOnClickListener(v -> {
-            if (annonce.getVendeur() != null) {
+            try {
+                if (annonce == null) {
+                    Toast.makeText(this, "Annonce non disponible", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (annonce.getVendeur() == null) {
+                    Toast.makeText(this, "Vendeur non identifié", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Utilisateur utilisateurConnecte = realm.where(Utilisateur.class)
+                        .equalTo("estConnecte", true)
+                        .findFirst();
+
+                if (utilisateurConnecte == null) {
+                    Toast.makeText(this, "Vous devez être connecté", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (utilisateurConnecte.getId().equals(annonce.getVendeur().getId())) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("Information")
+                            .setMessage("C'est votre propre annonce. Vous ne pouvez pas vous contacter vous-même.")
+                            .setPositiveButton("OK", null)
+                            .show();
+                    return;
+                }
+
+                Log.d("DetailAnnonce", "Annonce ID: " + annonce.getId());
+                Log.d("DetailAnnonce", "Vendeur ID: " + annonce.getVendeur().getId());
+                Log.d("DetailAnnonce", "Acheteur ID: " + utilisateurConnecte.getId());
+
                 Intent intent = new Intent(this, ConversationActivity.class);
                 intent.putExtra("annonce_id", annonce.getId());
                 intent.putExtra("vendeur_id", annonce.getVendeur().getId());
-                startActivity(intent);
-            } else {
-                Toast.makeText(this, "Vendeur non identifié", Toast.LENGTH_SHORT).show();
+                intent.putExtra("acheteur_id", utilisateurConnecte.getId());
+                startActivityForResult(intent, 600);
+
+            } catch (Exception e) {
+                Log.e("DetailAnnonce", "Erreur: " + e.getMessage(), e);
+                Toast.makeText(this, "Erreur: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
 
-        buttonFavoris.setOnClickListener(v -> {
-            toggleFavori();
-        });
+        buttonFavoris.setOnClickListener(v -> toggleFavori());
 
+        // ✅ CORRECTION : setResult(RESULT_OK) avant finish()
         buttonRetour.setOnClickListener(v -> {
+            setResult(RESULT_OK);
             finish();
         });
     }
@@ -169,18 +203,13 @@ public class DetailAnnonceActivity extends AppCompatActivity {
                 annonceToUpdate.setNombreFavoris(Math.max(0, nouveauNombre));
             }
         }, () -> {
-            // Succès
             String message = annonce.isEstFavori() ?
                     "✅ Ajouté aux favoris" :
                     "❌ Retiré des favoris";
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-
-            // Mettre à jour le texte du bouton
             updateFavoriButtonText();
         }, error -> {
-            Toast.makeText(this,
-                    "Erreur lors de la mise à jour",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Erreur lors de la mise à jour", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -192,7 +221,19 @@ public class DetailAnnonceActivity extends AppCompatActivity {
         }
     }
 
+    // ✅ Flèche haut gauche
+    @Override
+    public boolean onSupportNavigateUp() {
+        setResult(RESULT_OK);
+        finish();
+        return true;
+    }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // Retour de ConversationActivity — rien à faire ici
+    }
 
     @Override
     protected void onDestroy() {
