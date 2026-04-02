@@ -148,7 +148,7 @@ public class ProfilFragment extends Fragment {
         String[] titresFavoris = new String[favoris.size()];
         for (int i = 0; i < favoris.size(); i++) {
             Annonce a = favoris.get(i);
-            titresFavoris[i] = a.getTitre() + " - " + a.getPrix() + "€";
+            titresFavoris[i] = a.getTitre() + " - " + a.getPrix() + "DH";
         }
 
         new MaterialAlertDialogBuilder(requireContext())

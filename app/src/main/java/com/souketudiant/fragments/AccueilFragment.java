@@ -44,11 +44,13 @@ import java.util.List;
 import io.realm.Realm;
 import io.realm.RealmQuery;
 import io.realm.RealmResults;
+import io.realm.Case;
 
 public class AccueilFragment extends Fragment {
 
     private Realm realm;
     private RecyclerView recyclerView;
+
     private AnnonceAdapter adapter;
     private RealmResults<Annonce> annonces;
     private TextView textViewFiltreActif;
@@ -118,17 +120,21 @@ public class AccueilFragment extends Fragment {
                 SearchView searchView = (SearchView) searchItem.getActionView();
                 searchView.setQueryHint("Rechercher un article...");
 
+                // AJOUTEZ CES 2 LIGNES
+                searchView.setIconifiedByDefault(false);
+                searchView.setMaxWidth(Integer.MAX_VALUE);
+
                 searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                     @Override
                     public boolean onQueryTextSubmit(String query) {
-                        rechercheText = query;
+                        rechercheText = query != null ? query : "";
                         chargerAnnonces();
                         return true;
                     }
 
                     @Override
                     public boolean onQueryTextChange(String newText) {
-                        rechercheText = newText;
+                        rechercheText = newText != null ? newText : "";
                         chargerAnnonces();
                         return true;
                     }
@@ -152,6 +158,8 @@ public class AccueilFragment extends Fragment {
         }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
     }
 
+
+
     private void toggleFavori(Annonce annonce, int position) {
         String annonceId = annonce.getId();
 
@@ -168,8 +176,8 @@ public class AccueilFragment extends Fragment {
             }
         }, () -> {
             String message = annonce.isEstFavori() ?
-                    "✅ Ajouté aux favoris" :
-                    "❌ Retiré des favoris";
+                    "❌ Retiré aux favoris" :
+                    "✅ Ajouté des favoris";
             Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
             chargerAnnonces();
         });
@@ -297,15 +305,16 @@ public class AccueilFragment extends Fragment {
     }
 
     private void chargerAnnonces() {
-        // ICI LA CORRECTION : NE PAS FILTRER PAR UTILISATEUR !
+        if (realm == null || realm.isClosed()) return;
+
         RealmQuery<Annonce> query = realm.where(Annonce.class);
 
-        // Filtre par recherche texte
-        if (!rechercheText.isEmpty()) {
+        // Filtre par recherche texte (MODIFIÉ)
+        if (rechercheText != null && !rechercheText.isEmpty()) {
             query = query.beginGroup()
-                    .contains("titre", rechercheText)
+                    .contains("titre", rechercheText, io.realm.Case.INSENSITIVE)
                     .or()
-                    .contains("description", rechercheText)
+                    .contains("description", rechercheText, io.realm.Case.INSENSITIVE)
                     .endGroup();
         }
 
@@ -325,13 +334,9 @@ public class AccueilFragment extends Fragment {
         // Ne montrer que les annonces non vendues
         query = query.equalTo("estVendu", false);
 
-        // ⚠️ PAS DE FILTRE PAR UTILISATEUR ICI !
-        // On veut TOUTES les annonces de TOUS les utilisateurs
-
         annonces = query.findAllAsync();
 
         annonces.addChangeListener(collection -> {
-            Log.d("AccueilFragment", "Nombre d'annonces chargées: " + collection.size());
             adapter.updateData(realm.copyFromRealm(collection));
         });
     }

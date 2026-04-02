@@ -24,7 +24,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Prix minimum (€)"
+        android:text="Prix minimum (DH)"
         android:textSize="16sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />

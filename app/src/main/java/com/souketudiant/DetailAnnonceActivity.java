@@ -96,8 +96,9 @@ public class DetailAnnonceActivity extends AppCompatActivity {
     private void afficherDetails() {
         textViewTitre.setText(annonce.getTitre());
 
-        NumberFormat format = NumberFormat.getCurrencyInstance(Locale.FRANCE);
-        textViewPrix.setText(format.format(annonce.getPrix()));
+        // Prix
+        String prixFormate = String.format(Locale.FRANCE, "%.2f DH", annonce.getPrix());
+        textViewPrix.setText(prixFormate);
 
         textViewCategorie.setText(annonce.getCategorie());
         textViewEtat.setText(annonce.getEtat());

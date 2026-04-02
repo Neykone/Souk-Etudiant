@@ -97,8 +97,7 @@ public class AnnonceAdapter extends RecyclerView.Adapter<AnnonceAdapter.AnnonceV
             textViewTitre.setText(annonce.getTitre());
 
             // Prix formaté
-            NumberFormat format = NumberFormat.getCurrencyInstance(Locale.FRANCE);
-            String prixFormate = format.format(annonce.getPrix());
+            String prixFormate = String.format(Locale.FRANCE, "%.2f DH", annonce.getPrix());
             textViewPrix.setText(prixFormate);
 
             // Description
