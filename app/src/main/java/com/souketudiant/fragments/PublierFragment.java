@@ -108,6 +108,8 @@ public class PublierFragment extends Fragment {
                 Categories.ETATS
         );
         autoCompleteEtat.setAdapter(etatAdapter);
+        autoCompleteCategorie.setOnClickListener(v -> autoCompleteCategorie.showDropDown());
+        autoCompleteEtat.setOnClickListener(v -> autoCompleteEtat.showDropDown());
     }
 
     private void setupClickListeners() {
