@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="220"
+    android:viewportHeight="220">
+
+    <!-- Sac -->
+    <path android:fillColor="#2563EB"
+        android:pathData="M20,90 Q20,210 110,210 Q200,210 200,90 Q200,60 110,60 Q20,60 20,90Z"/>
+    <!-- Poignée -->
+    <path android:fillColor="none" android:strokeColor="#1D4ED8"
+        android:strokeWidth="12" android:strokeLineCap="round"
+        android:pathData="M75,60 Q75,25 110,25 Q145,25 145,60"/>
+    <!-- Livre -->
+    <path android:fillColor="#F59E0B"
+        android:pathData="M80,35 L80,95 L130,95 L130,35Z"/>
+    <!-- Étiquette prix -->
+    <path android:fillColor="#10B981"
+        android:pathData="M140,30 L185,30 L185,58 L140,58 L140,30Z"/>
+</vector>
