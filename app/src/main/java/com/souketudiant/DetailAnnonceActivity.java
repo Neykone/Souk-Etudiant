@@ -193,21 +193,18 @@ public class DetailAnnonceActivity extends AppCompatActivity {
         String annonceId = annonce.getId();
 
         realm.executeTransactionAsync(r -> {
-            Annonce annonceToUpdate = r.where(Annonce.class)
-                    .equalTo("id", annonceId)
+            Utilisateur user = r.where(Utilisateur.class)
+                    .equalTo("estConnecte", true)
                     .findFirst();
-            if (annonceToUpdate != null) {
-                boolean nouveauStatut = !annonceToUpdate.isEstFavori();
-                annonceToUpdate.setEstFavori(nouveauStatut);
+            if (user == null) return;
 
-                int nouveauNombre = annonceToUpdate.getNombreFavoris() + (nouveauStatut ? 1 : -1);
-                annonceToUpdate.setNombreFavoris(Math.max(0, nouveauNombre));
+            if (user.getAnnoncesFavorisIds().contains(annonceId)) {
+                user.getAnnoncesFavorisIds().remove(annonceId);
+            } else {
+                user.getAnnoncesFavorisIds().add(annonceId);
             }
         }, () -> {
-            String message = annonce.isEstFavori() ?
-                    "✅ Ajouté aux favoris" :
-                    "❌ Retiré des favoris";
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Favoris mis à jour", Toast.LENGTH_SHORT).show();
             updateFavoriButtonText();
         }, error -> {
             Toast.makeText(this, "Erreur lors de la mise à jour", Toast.LENGTH_SHORT).show();
@@ -215,14 +212,16 @@ public class DetailAnnonceActivity extends AppCompatActivity {
     }
 
     private void updateFavoriButtonText() {
-        if (annonce.isEstFavori()) {
-            buttonFavoris.setText("Retirer des favoris");
-        } else {
-            buttonFavoris.setText("Ajouter aux favoris");
-        }
+        Utilisateur user = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true)
+                .findFirst();
+        boolean isFavori = user != null
+                && user.getAnnoncesFavorisIds() != null
+                && user.getAnnoncesFavorisIds().contains(annonce.getId());
+        buttonFavoris.setText(isFavori ? "Retirer des favoris" : "Ajouter aux favoris");
     }
 
-    // ✅ Flèche haut gauche
+
     @Override
     public boolean onSupportNavigateUp() {
         setResult(RESULT_OK);

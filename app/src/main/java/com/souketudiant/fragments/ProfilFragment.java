@@ -24,6 +24,9 @@ import com.souketudiant.R;
 import com.souketudiant.models.Annonce;
 import com.souketudiant.models.Utilisateur;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.realm.Realm;
 import io.realm.RealmResults;
 
@@ -103,13 +106,12 @@ public class ProfilFragment extends Fragment {
         });
 
         // Mes favoris
-        mesFavoris = realm.where(Annonce.class)
-                .equalTo("estFavori", true)
-                .findAllAsync();
-
-        mesFavoris.addChangeListener(collection -> {
-            textViewNbFavoris.setText(String.valueOf(collection.size()));
-        });
+        Utilisateur userProfil = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true)
+                .findFirst();
+        int nbFavoris = (userProfil != null && userProfil.getAnnoncesFavorisIds() != null)
+                ? userProfil.getAnnoncesFavorisIds().size() : 0;
+        textViewNbFavoris.setText(String.valueOf(nbFavoris));
     }
 
     private void setupClickListeners() {
@@ -134,29 +136,37 @@ public class ProfilFragment extends Fragment {
     }
 
     private void showFavorisDialog() {
-        RealmResults<Annonce> favoris = realm.where(Annonce.class)
-                .equalTo("estFavori", true)
-                .findAll();
+        Utilisateur user = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true)
+                .findFirst();
 
-        if (favoris.isEmpty()) {
-            Toast.makeText(getContext(),
-                    "Vous n'avez pas encore d'annonces favorites",
-                    Toast.LENGTH_SHORT).show();
+        if (user == null || user.getAnnoncesFavorisIds() == null || user.getAnnoncesFavorisIds().isEmpty()) {
+            Toast.makeText(getContext(), "Vous n'avez pas encore d'annonces favorites", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String[] titresFavoris = new String[favoris.size()];
-        for (int i = 0; i < favoris.size(); i++) {
-            Annonce a = favoris.get(i);
-            titresFavoris[i] = a.getTitre() + " - " + a.getPrix() + "DH";
+        List<Annonce> favoris = new ArrayList<>();
+        for (String id : user.getAnnoncesFavorisIds()) {
+            Annonce a = realm.where(Annonce.class).equalTo("id", id).findFirst();
+            if (a != null) favoris.add(a);
         }
 
+        if (favoris.isEmpty()) {
+            Toast.makeText(getContext(), "Aucune annonce favorite trouvée", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] titres = new String[favoris.size()];
+        for (int i = 0; i < favoris.size(); i++) {
+            titres[i] = favoris.get(i).getTitre() + " - " + favoris.get(i).getPrix() + "DH";
+        }
+
+        final List<Annonce> finalFavoris = favoris;
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Mes favoris")
-                .setItems(titresFavoris, (dialog, which) -> {
-                    Annonce annonce = favoris.get(which);
+                .setItems(titres, (dialog, which) -> {
                     Intent intent = new Intent(getActivity(), com.souketudiant.DetailAnnonceActivity.class);
-                    intent.putExtra("annonce_id", annonce.getId());
+                    intent.putExtra("annonce_id", finalFavoris.get(which).getId());
                     startActivity(intent);
                 })
                 .setPositiveButton("Fermer", null)

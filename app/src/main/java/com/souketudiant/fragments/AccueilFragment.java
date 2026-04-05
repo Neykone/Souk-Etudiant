@@ -37,6 +37,7 @@ import com.souketudiant.DetailAnnonceActivity;
 import com.souketudiant.R;
 import com.souketudiant.adapters.AnnonceAdapter;
 import com.souketudiant.models.Annonce;
+import com.souketudiant.models.Utilisateur;
 import com.souketudiant.utils.Categories;
 
 import java.util.ArrayList;
@@ -168,21 +169,17 @@ public class AccueilFragment extends Fragment {
         String annonceId = annonce.getId();
 
         realm.executeTransactionAsync(r -> {
-            Annonce annonceToUpdate = r.where(Annonce.class)
-                    .equalTo("id", annonceId)
+            Utilisateur user = r.where(Utilisateur.class)
+                    .equalTo("estConnecte", true)
                     .findFirst();
-            if (annonceToUpdate != null) {
-                boolean nouveauStatut = !annonceToUpdate.isEstFavori();
-                annonceToUpdate.setEstFavori(nouveauStatut);
+            if (user == null) return;
 
-                int nouveauNombre = annonceToUpdate.getNombreFavoris() + (nouveauStatut ? 1 : -1);
-                annonceToUpdate.setNombreFavoris(Math.max(0, nouveauNombre));
+            if (user.getAnnoncesFavorisIds().contains(annonceId)) {
+                user.getAnnoncesFavorisIds().remove(annonceId);
+            } else {
+                user.getAnnoncesFavorisIds().add(annonceId);
             }
         }, () -> {
-            String message = annonce.isEstFavori() ?
-                    "❌ Retiré aux favoris" :
-                    "✅ Ajouté des favoris";
-            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
             chargerAnnonces();
         });
     }
@@ -311,9 +308,18 @@ public class AccueilFragment extends Fragment {
     private void chargerAnnonces() {
         if (realm == null || realm.isClosed()) return;
 
+        Utilisateur user = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true)
+                .findFirst();
+
+        List<String> favorisIds = new ArrayList<>();
+        if (user != null && user.getAnnoncesFavorisIds() != null) {
+            favorisIds.addAll(user.getAnnoncesFavorisIds());
+        }
+        final List<String> finalFavorisIds = favorisIds;
+
         RealmQuery<Annonce> query = realm.where(Annonce.class);
 
-        // Filtre par recherche texte (MODIFIÉ)
         if (rechercheText != null && !rechercheText.isEmpty()) {
             query = query.beginGroup()
                     .contains("titre", rechercheText, io.realm.Case.INSENSITIVE)
@@ -321,27 +327,24 @@ public class AccueilFragment extends Fragment {
                     .contains("description", rechercheText, io.realm.Case.INSENSITIVE)
                     .endGroup();
         }
-
-        // Filtre par catégorie
         if (!categorieFilter.equals("Tous")) {
             query = query.equalTo("categorie", categorieFilter);
         }
-
-        // Filtre par prix
         query = query.between("prix", prixMinFilter, prixMaxFilter);
-
-        // Filtre par état
         if (!etatFilter.equals("Tous")) {
             query = query.equalTo("etat", etatFilter);
         }
-
-        // Ne montrer que les annonces non vendues
         query = query.equalTo("estVendu", false);
 
         annonces = query.findAllAsync();
 
         annonces.addChangeListener(collection -> {
-            adapter.updateData(realm.copyFromRealm(collection));
+            List<Annonce> copie = realm.copyFromRealm(collection);
+            // Marquer les favoris selon l'utilisateur connecté
+            for (Annonce a : copie) {
+                a.setEstFavori(finalFavorisIds.contains(a.getId()));
+            }
+            adapter.updateData(copie);
         });
     }
 

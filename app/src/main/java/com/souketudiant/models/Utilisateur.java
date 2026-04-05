@@ -4,6 +4,7 @@ import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
 import io.realm.annotations.Required;
 import java.util.Date;
+import io.realm.RealmList;
 
 public class Utilisateur extends RealmObject {
 
@@ -24,12 +25,13 @@ public class Utilisateur extends RealmObject {
     private Date dateInscription;
     private String photoUrl;
     private boolean estConnecte;  // Pour savoir si l'utilisateur est connecté
-
+    private RealmList<String> annoncesFavorisIds;
     // Constructeurs
     public Utilisateur() {
         this.id = java.util.UUID.randomUUID().toString();
         this.dateInscription = new Date();
         this.estConnecte = false;
+        this.annoncesFavorisIds = new RealmList<>();
     }
 
     public Utilisateur(String nom, String email, String motDePasse) {
@@ -68,4 +70,6 @@ public class Utilisateur extends RealmObject {
 
     public boolean isEstConnecte() { return estConnecte; }
     public void setEstConnecte(boolean estConnecte) { this.estConnecte = estConnecte; }
+    public RealmList<String> getAnnoncesFavorisIds() { return annoncesFavorisIds; }
+    public void setAnnoncesFavorisIds(RealmList<String> annoncesFavorisIds) { this.annoncesFavorisIds = annoncesFavorisIds; }
 }

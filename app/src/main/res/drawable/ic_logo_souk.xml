@@ -9,7 +9,7 @@
     <path android:fillColor="#2563EB"
         android:pathData="M20,90 Q20,210 110,210 Q200,210 200,90 Q200,60 110,60 Q20,60 20,90Z"/>
     <!-- Poignée -->
-    <path android:fillColor="none" android:strokeColor="#1D4ED8"
+    <path android:fillColor="#00000000" android:strokeColor="#1D4ED8"
         android:strokeWidth="12" android:strokeLineCap="round"
         android:pathData="M75,60 Q75,25 110,25 Q145,25 145,60"/>
     <!-- Livre -->
