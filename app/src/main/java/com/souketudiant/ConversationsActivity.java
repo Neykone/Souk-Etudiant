@@ -117,7 +117,23 @@ public class ConversationsActivity extends AppCompatActivity {
                 Intent intent = new Intent(ConversationsActivity.this, ConversationActivity.class);
                 intent.putExtra("annonce_id", annonce.getId());
                 intent.putExtra("vendeur_id", annonce.getVendeur().getId());
-                intent.putExtra("acheteur_id", utilisateurConnecte.getId());
+
+                // Déterminer le vrai acheteur : l'autre participant, pas forcément l'utilisateur connecté
+                String vraiAcheteurId;
+                if (utilisateurConnecte.getId().equals(annonce.getVendeur().getId())) {
+                    // L'utilisateur connecté EST le vendeur → trouver l'acheteur dans les messages
+                    Message premierMessage = realm.where(Message.class)
+                            .equalTo("annonce.id", annonce.getId())
+                            .not().equalTo("expediteur.id", annonce.getVendeur().getId())
+                            .findFirst();
+                    vraiAcheteurId = premierMessage != null ?
+                            premierMessage.getExpediteur().getId() : utilisateurConnecte.getId();
+                } else {
+                    // L'utilisateur connecté est l'acheteur
+                    vraiAcheteurId = utilisateurConnecte.getId();
+                }
+
+                intent.putExtra("acheteur_id", vraiAcheteurId);
                 startActivityForResult(intent, 500);
             });
         }

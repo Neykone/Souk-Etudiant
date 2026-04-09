@@ -129,6 +129,19 @@ public class ConversationActivity extends AppCompatActivity {
             Log.d(TAG, "Annonce: " + annonce.getTitre());
             Log.d(TAG, "Vendeur: " + vendeur.getNom());
             Log.d(TAG, "Acheteur: " + acheteur.getNom());
+            // Récupérer l'utilisateur connecté
+            Utilisateur userConnecte = realm.where(Utilisateur.class)
+                    .equalTo("estConnecte", true)
+                    .findFirst();
+
+// Vérifier qu'il est bien vendeur OU acheteur de cette conversation
+            if (userConnecte == null ||
+                    (!userConnecte.getId().equals(vendeurId) &&
+                            !userConnecte.getId().equals(acheteurId))) {
+                Toast.makeText(this, "Accès refusé", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
 
             initViews();
             setupRecyclerView();
@@ -169,7 +182,12 @@ public class ConversationActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setHasFixedSize(true);
 
-        adapter = new MessageAdapter(java.util.Collections.emptyList(), acheteurId);
+        // Utiliser l'utilisateur connecté pour déterminer les bulles envoyé/reçu
+        Utilisateur userConnecte = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true).findFirst();
+        String currentUserId = userConnecte != null ? userConnecte.getId() : acheteurId;
+
+        adapter = new MessageAdapter(java.util.Collections.emptyList(), currentUserId);
         recyclerView.setAdapter(adapter);
     }
 
@@ -177,17 +195,21 @@ public class ConversationActivity extends AppCompatActivity {
         try {
             Log.d(TAG, "Chargement des messages...");
 
-            // IMPORTANT: Récupérer TOUS les messages de cette conversation
+            // Récupérer UNIQUEMENT les messages privés entre cet acheteur et ce vendeur
+            // pour cette annonce. On filtre les deux sens d'envoi :
+            // (expediteur=acheteur ET destinataire=vendeur) OU (expediteur=vendeur ET destinataire=acheteur)
             messages = realm.where(Message.class)
-                    .equalTo("annonce.id", annonceId)  // Même annonce
+                    .equalTo("annonce.id", annonceId)
+                    .beginGroup()
                     .beginGroup()
                     .equalTo("expediteur.id", acheteurId)
-                    .or()
-                    .equalTo("expediteur.id", vendeurId)
-                    .or()
-                    .equalTo("destinataire.id", acheteurId)
-                    .or()
                     .equalTo("destinataire.id", vendeurId)
+                    .endGroup()
+                    .or()
+                    .beginGroup()
+                    .equalTo("expediteur.id", vendeurId)
+                    .equalTo("destinataire.id", acheteurId)
+                    .endGroup()
                     .endGroup()
                     .sort("dateEnvoi", Sort.ASCENDING)
                     .findAllAsync();
@@ -264,12 +286,18 @@ public class ConversationActivity extends AppCompatActivity {
         String acheteurIdLocal = acheteurId;
         String vendeurIdLocal = vendeurId;
 
+        // Déterminer qui envoie : l'utilisateur connecté
+        Utilisateur userConnecte = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true).findFirst();
+        String expediteurIdLocal = userConnecte != null ? userConnecte.getId() : acheteurId;
+        String destinataireIdLocal = expediteurIdLocal.equals(vendeurId) ? acheteurId : vendeurId;
+
         Log.d(TAG, "Envoi du message: " + contenu);
 
         realm.executeTransactionAsync(r -> {
             Annonce bgAnnonce = r.where(Annonce.class).equalTo("id", annonceIdLocal).findFirst();
-            Utilisateur bgExpediteur = r.where(Utilisateur.class).equalTo("id", acheteurIdLocal).findFirst();
-            Utilisateur bgDestinataire = r.where(Utilisateur.class).equalTo("id", vendeurIdLocal).findFirst();
+            Utilisateur bgExpediteur = r.where(Utilisateur.class).equalTo("id", expediteurIdLocal).findFirst();
+            Utilisateur bgDestinataire = r.where(Utilisateur.class).equalTo("id", destinataireIdLocal).findFirst();
 
             if (bgAnnonce != null && bgExpediteur != null && bgDestinataire != null) {
                 Message message = r.createObject(Message.class, messageId);
@@ -375,13 +403,17 @@ public class ConversationActivity extends AppCompatActivity {
         Date maintenant = new Date();
 
         String annonceIdLocal = annonceId;
-        String acheteurIdLocal = acheteurId;
-        String vendeurIdLocal = vendeurId;
+
+        // Déterminer qui envoie : l'utilisateur connecté
+        Utilisateur userConnecte = realm.where(Utilisateur.class)
+                .equalTo("estConnecte", true).findFirst();
+        String expediteurIdLocal = userConnecte != null ? userConnecte.getId() : acheteurId;
+        String destinataireIdLocal = expediteurIdLocal.equals(vendeurId) ? acheteurId : vendeurId;
 
         realm.executeTransactionAsync(r -> {
             Annonce bgAnnonce = r.where(Annonce.class).equalTo("id", annonceIdLocal).findFirst();
-            Utilisateur bgExpediteur = r.where(Utilisateur.class).equalTo("id", acheteurIdLocal).findFirst();
-            Utilisateur bgDestinataire = r.where(Utilisateur.class).equalTo("id", vendeurIdLocal).findFirst();
+            Utilisateur bgExpediteur = r.where(Utilisateur.class).equalTo("id", expediteurIdLocal).findFirst();
+            Utilisateur bgDestinataire = r.where(Utilisateur.class).equalTo("id", destinataireIdLocal).findFirst();
 
             if (bgAnnonce != null && bgExpediteur != null && bgDestinataire != null) {
                 Message message = r.createObject(Message.class, messageId);
